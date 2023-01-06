@@ -8,7 +8,8 @@ pipeline {
   stages {
     stage('Cloning Git') {
       steps {
-        git 'https://github.com/shiva2devops/hello-world.git'
+        checkout scmGit(branches: [[name: '*/master']], extensions: [],
+                userRemoteConfigs: [[url: 'https://github.com/shiva2devops/hello-world.git']])
       }
     }
     stage('Building image') {
