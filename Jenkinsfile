@@ -1,4 +1,3 @@
-
  pipeline {
     agent {
         docker {
@@ -14,22 +13,26 @@
                 userRemoteConfigs: [[url: 'https://github.com/shiva2devops/hello-world.git']])
             }
         }
-        stage('Unit Test') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-        stage('Install') {
+
+        stage('Unit Test & Generate the Artifacts') {
             steps {
                 sh 'mvn clean install'
             }
         }
         stage('docker Build') {
+            agent any
             steps {
-                sshPublisher(publishers: [sshPublisherDesc(configName: 'docker', transfers: [sshTransfer(cleanRemote: false, 
-                excludes: '', execCommand: '''cd opt/docker/hello-world/dockerdir/;
-docker build -t helloworld .; docker run -dt --name hellowrld -p 9999:8080 helloworld ''', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: 'opt/docker/hello-world/dockerdir/', remoteDirectorySDF: false, removePrefix: 'webapp/target/', sourceFiles: 'webapp/target/*.war')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
-            }
+                sh 'docker build -t mshiva7396/hellowrld:latest .'
+                   }
+        }
+        stage('docker Push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'docker_pwd', usernameVariable: 'docker_uname')]) {
+                    sh "docker login -u ${env.docker_uname} -p ${env.docker_pwd}"
+                    sh 'docker push mshiva7396/hellowrld:latest'
+   
+           }
+                   }
         }
         
     }
