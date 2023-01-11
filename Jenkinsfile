@@ -1,39 +1,47 @@
  pipeline {
-    agent {
-        docker {
-            image 'maven:3.8.7-eclipse-temurin-11'
-            args '-v $HOME/.m2:/root/.m2'
-        }
+    environment { 
+        registry = "mshiva7396/project-test" 
+        registryCredential = 'docker-hub' 
+        dockerImage = '' 
     }
+    agent any
+
     stages {
         
-        stage('git checkout') {
+        stage('Build Image') {
             steps {
-                checkout scmGit(branches: [[name: '*/master']], extensions: [],
-                userRemoteConfigs: [[url: 'https://github.com/shiva2devops/hello-world.git']])
+                echo 'Building Docker Image'
+                script {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
             }
-        }
-
-        stage('Unit Test & Generate the Artifacts') {
-            steps {
-                sh 'mvn clean install'
-            }
-        }
-        stage('docker Build') {
-            agent any
-            steps {
-                sh 'docker build -t mshiva7396/hellowrld:latest .'
-                   }
-        }
-        stage('docker Push') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'docker_pwd', usernameVariable: 'docker_uname')]) {
-                    sh "docker login -u ${env.docker_uname} -p ${env.docker_pwd}"
-                    sh 'docker push mshiva7396/hellowrld:latest'
-   
-           }
-                   }
         }
         
+        stage('Deploy Image') {
+            steps {
+                echo 'Pushing Docker Image'
+                script {
+                   docker.withRegistry( '', registryCredential ) {
+                   dockerImage.push("$BUILD_NUMBER")
+                   dockerImage.push('latest')
+                  }
+                }
+            }
+        }
+        
+        // stage('Clean Up') {
+        //     steps {
+        //         sh "docker rmi $registry:$BUILD_NUMBER"
+        //         sh "docker rmi $registry:latest"
+        //     }
+        // }
+        // stage('Deploy') {
+        //     steps {
+        //         echo 'Deploying....'
+        //         sh "kubectl apply -f deployment.yaml"
+        //         sh "kubectl apply -f service.yaml"
+        //         sh "kubectl rollout restart deployment.apps/calc-deployment"
+        //     }
+        // }
     }
 }
