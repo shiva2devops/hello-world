@@ -4,10 +4,26 @@
         registryCredential = 'docker-hub' 
         dockerImage = '' 
     }
-    agent any
-
+      agent {
+        docker {
+            image 'maven:3.8.7-eclipse-temurin-11'
+            args '-v $HOME/.m2:/root/.m2'
+        }
+    }
     stages {
         
+        stage('git checkout') {
+            steps {
+                checkout scmGit(branches: [[name: '*/master']], extensions: [],
+                userRemoteConfigs: [[url: 'https://github.com/shiva2devops/hello-world.git']])
+            }
+        }
+
+        stage('Unit Test & Generate the Artifacts') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }  
         stage('Build Image') {
             steps {
                 echo 'Building Docker Image'
@@ -28,20 +44,5 @@
                 }
             }
         }
-        
-        // stage('Clean Up') {
-        //     steps {
-        //         sh "docker rmi $registry:$BUILD_NUMBER"
-        //         sh "docker rmi $registry:latest"
-        //     }
-        // }
-        // stage('Deploy') {
-        //     steps {
-        //         echo 'Deploying....'
-        //         sh "kubectl apply -f deployment.yaml"
-        //         sh "kubectl apply -f service.yaml"
-        //         sh "kubectl rollout restart deployment.apps/calc-deployment"
-        //     }
-        // }
-    }
+    
 }
